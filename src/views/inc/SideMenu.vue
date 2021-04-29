@@ -25,8 +25,8 @@
 			</template>
 
 
-			<!--动态菜单链接-->
-			<router-link :to="item.linkUrl" v-for="item in menu.children">
+			<!--动态菜单链接  icon可以动态 获取 待完善-->
+			<router-link :to="item.path" v-for="item in menu.children">
 				<el-menu-item :index="item.name" @click="selectMenu(item)">
 					<template slot="title">
 						<i class="el-icon-edit"></i>
@@ -51,22 +51,40 @@
 			}
 		},
 		computed:  {
+
 			menuList: {
 				get() {
 					return this.$store.state.menus.menuList
 				}
-			}
+			},
+			/*activeMenu() {
+				return this.$store.state.menus.editableTabsValue
+			}*/
 		},
 		methods: {
 			selectMenu(item) {
-				this.$store.commit("addTab", item)
+				let obj = {
+					name: item.name,
+					title: item.title
+				}
+				this.$store.commit("addTabs", obj)
+				//this.$store.commit("addTab", item)
 			}
 		}
 	}
 </script>
 
+<!--待完善！！！-->
 <style scoped>
 	.el-menu-vertical-demo {
 		height: 100%;
+	}
+	.router-link-active {
+		text-decoration: none;
+		color: yellow;
+	}
+	a{
+		text-decoration: none;
+		color: white;
 	}
 </style>

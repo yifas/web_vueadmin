@@ -38,7 +38,7 @@ const routes = [
 				},
 				component: () => import('@/views/UserCenter.vue')
 			},
-			{
+			/*{
 				path: '/sys/users',  //与数据库中menu linkUrl相关
 				name: 'SysUser',
 				component: User
@@ -52,7 +52,7 @@ const routes = [
 				path: '/sys/menus',
 				name: 'SysMenu',
 				component: Menu
-			},
+			},*/
 		]
 	},
 
@@ -150,7 +150,7 @@ const menuToRoute = (menu) => {
 		path: menu.path,
 		meta: {
 			icon: menu.icon,
-			title: menu.title
+			title: menu.name
 		}
 	}
 	route.component = () => import('@/views/' + menu.component +'.vue')

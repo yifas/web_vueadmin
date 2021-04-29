@@ -18,6 +18,8 @@ export default {
 			title: '首页',
 			name: 'Index',
 		}]
+
+
 	},
 	mutations: {
 		setMenuList(state, menus) {
@@ -30,20 +32,33 @@ export default {
 			state.hasRoutes = hasRoutes
 		},
 
-		addTab(state, tab) {
+	/*	addTab(state, tab) {
 
 			let index = state.editableTabs.findIndex(e => e.name === tab.name)
 
 			if (index === -1) {
 				state.editableTabs.push({
-					title: tab.title,
+					//todo
+					title: tab.name,
 					name: tab.name,
 				});
 			}
 
 			state.editableTabsValue = tab.name;
+		},*/
+		addTabs(state, tab){
+			// 判断是否在栈内
+			let index = state.editableTabs.findIndex(item => item.name === tab.name)
+			if (index === -1) {
+				// 添加到tabs中
+				state.editableTabs.push(tab)
+			}
+			// 当前激活的tab
+			state.editableTabsValue = tab.name
 		},
-
+	/*	setActiveTab(state, tabName) {
+			state.editableTabsValue = tabName
+		},*/
 		resetState: (state) => {
 			state.menuList = []
 			state.permList = []

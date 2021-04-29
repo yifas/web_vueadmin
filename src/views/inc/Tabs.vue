@@ -3,7 +3,7 @@
 		<el-tab-pane
 				v-for="(item, index) in editableTabs"
 				:key="item.name"
-				:label="item.title"
+				:label="item.name"
 				:name="item.name"
 		>
 
@@ -44,7 +44,8 @@
 				let tabs = this.editableTabs;
 				let activeName = this.editableTabsValue;
 
-				if (activeName === 'Index') {
+
+				if (targetName === 'Index') {
 					return
 				}
 

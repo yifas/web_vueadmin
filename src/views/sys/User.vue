@@ -32,7 +32,7 @@
 
 
 
-
+        <!--表单-->
 
         <el-table size="small" current-row-key="id" :data="dataList" stripe highlight-current-row>
             <el-table-column type="selection" width="55"></el-table-column>
@@ -50,7 +50,7 @@
             </el-table-column>-->
             <el-table-column
                     prop="icon"
-                    width="auto"
+                    width="260px"
                     label="操作"
                     align="center">
 

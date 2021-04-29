@@ -20,7 +20,7 @@
 						title: to.meta.title
 					}
 
-					this.$store.commit("addTab", obj)
+					this.$store.commit("addTabs", obj)
 				}
 
 			}

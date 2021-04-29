@@ -11,7 +11,7 @@
 			</el-form-item>
 
 			<el-form-item>
-				<el-button type="primary" @click="dialogVisible = true">新增</el-button>
+				<el-button type="primary" @click="handleAdd">新增</el-button>
 			</el-form-item>
 			<el-form-item>
 				<el-button type="success" @click="showAll">全部显示</el-button>
@@ -116,7 +116,10 @@
 						</el-popconfirm>
 					</template>
 					<el-divider direction="vertical"></el-divider>
-					<el-button size="mini" type="success" @click="roleHandle(scope.row.id)">分配权限</el-button>
+					<el-button size="mini" type="warning" @click="permHandle(scope.row.id)">分配权限</el-button>
+
+					<el-divider direction="vertical"></el-divider>
+					<el-button size="mini" type="success" @click="menuHandle(scope.row.id)">分配菜单</el-button>
 
 
 				</template>
@@ -137,6 +140,40 @@
 					:total="pagination.total">
 			</el-pagination>
 		</div>
+
+
+		<!--新增对话框-->
+		<el-dialog
+				title="新增角色信息"
+				:visible.sync="dialog4addVisible"
+				width="600px"
+				:before-close="handleClose">
+
+			<el-form :model="addForm" :rules="addFormRules" ref="addForm" label-width="100px" class="demo-editForm">
+
+				<!--<el-form-item label="序号" prop="id" label-width="100px">
+					<el-input v-model="addForm.id" autocomplete="off"></el-input>
+				</el-form-item>-->
+
+				<el-form-item label="角色名" prop="name" label-width="100px">
+					<el-input v-model="addForm.name" autocomplete="off"></el-input>
+				</el-form-item>
+
+				<el-form-item label="关键字" prop="keyword" label-width="100px">
+					<el-input v-model="addForm.keyword" autocomplete="off"></el-input>
+				</el-form-item>
+				<el-form-item label="描述信息" prop="description" label-width="100px">
+					<el-input v-model="addForm.description" autocomplete="off"></el-input>
+				</el-form-item>
+
+			</el-form>
+
+			<div slot="footer" class="dialog-footer">
+				<el-button @click="resetForm('addForm')">取 消</el-button>
+				<el-button type="primary" @click="submitAddForm('addForm')">确 定</el-button>
+			</div>
+		</el-dialog>
+
 
 
 		<!--编辑对话框-->
@@ -171,6 +208,9 @@
 			</div>
 		</el-dialog>
 
+
+
+<!--
 		<el-dialog
 				title="分配权限"
 				:visible.sync="permDialogVisible"
@@ -195,7 +235,34 @@
 			    <el-button type="primary" @click="submitPermFormHandle('permForm')">确 定</el-button>
 			</span>
 
+		</el-dialog>-->
+
+
+
+		<!-- 分配权限对话框 -->
+		<el-dialog title="分配权限" v-model="tempId" :visible.sync="permDialogFormVisible" width="600px">
+
+			<el-tree
+					:data="permData"
+					ref="permTree"
+					show-checkbox
+					:default-checked-keys="permIds"
+					node-key="id"
+					:default-expand-all=true
+					:props="defaultProps">
+			</el-tree>
+
+
+			<div slot="footer" class="dialog-footer">
+				<el-button @click="permDialogFormVisible=false">取 消</el-button>
+				<el-button type="primary" @click="submitPermFormHandle(tempId)">确 定</el-button>
+			</div>
 		</el-dialog>
+
+
+
+
+
 
 	</div>
 </template>
@@ -205,8 +272,6 @@
 		name: "Role",
 		data() {
 			return {
-				searchForm: {},
-
 				delBtlStatu: true,
 				pagination: {//分页相关模型数据
 					currentPage: 1,//当前页码
@@ -219,27 +284,33 @@
 				current: 1,
 				dataList:[],
 				dialogVisible: false,
+				dialog4addVisible: false,
+				permDialogFormVisible: false,
 				editForm: {},
-
-				tableData: [],
-
+				addForm:{},
+				permData: [], //所有权限数据
+				permIds: [],//权限数组
+				tempId: [], //分配Menu Permission时传递用户ID
 				editFormRules: {
 					name: [
 						{required: true, message: '请输入角色名称', trigger: 'blur'}
 					],
-					code: [
-						{required: true, message: '请输入唯一编码', trigger: 'blur'}
+					keyword: [
+						{required: true, message: '请输入关键字', trigger: 'blur'}
+					]
+				},
+				addFormRules: {
+					name: [
+						{required: true, message: '请输入角色名称', trigger: 'blur'}
 					],
-					statu: [
-						{required: true, message: '请选择状态', trigger: 'blur'}
+					keyword: [
+						{required: true, message: '请输入关键字', trigger: 'blur'}
 					]
 				},
 
 				multipleSelection: [],
-
-				permDialogVisible: false,
 				permForm: {},
-				defaultProps: {
+				defaultProps: { //Tree 树形控件的配置  label=‘name’
 					children: 'children',
 					label: 'name'
 				},
@@ -271,20 +342,15 @@
 				this.delBtlStatu = val.length == 0
 			},
 
-			handleSizeChange(val) {
-				console.log(`每页 ${val} 条`);
-				this.size = val
-				this.getRoleList()
-			},
-			handleCurrentChange(val) {
-				console.log(`当前页: ${val}`);
-				this.current = val
-				this.getRoleList()
-			},
+			handleAdd(){  //新增按钮
+				this.addForm={};
+				this.dialog4addVisible = true;
 
+			},
 			resetForm(formName) {
 				this.$refs[formName].resetFields();
-				this.dialogVisible = false
+				this.dialogVisible = false;
+				this.dialog4addVisible = false;
 				this.editForm = {}
 			},
 			handleClose() {
@@ -323,7 +389,30 @@
 				this.pagination.currentPage = 1;
 				this.getRoleList();
 			},
-			submitForm() {
+			submitAddForm(){ //新增角色
+				this.$refs['addForm'].validate((valid) => {
+					if (valid) {
+						this.$axios.post('/role/addRole/' , this.addForm)
+								.then(res => {
+
+									this.$message({
+										showClose: true,
+										message: '新用户添加成功',
+										type: 'success',
+										onClose: () => {
+											this.getRoleList()
+										}
+									});
+
+									this.dialog4addVisible = false;
+								})
+					} else {
+						console.log('error submit!!');
+						return false;
+					}
+				});
+			},
+			submitForm() { //编辑角色
 				this.$refs['editForm'].validate((valid) => {
 					if (valid) {
 						this.$axios.post('/role/updateRoleInfo/' + this.editForm.id, this.editForm)
@@ -347,6 +436,7 @@
 				});
 			},
 			editHandle(id) { //角色信息回显
+
 				this.$axios.get('/role/findRoleByRoleId/' + id).then(res => {
 					this.editForm = res.data.data
 
@@ -378,34 +468,65 @@
 					});
 				})
 			},
-			permHandle(id) {
-				this.permDialogVisible = true
+			permHandle(id) { //权限回显
+				this.permDialogFormVisible = true;
+				//点击分配角色 先置空
+				this.tempId=[];
+				//将id传递给提交分配角色时使用
+				this.tempId.push(id);
 
-				this.$axios.get("/sys/role/info/" + id).then(res => {
+				this.$axios.get('/perm/findPermListTree').then(resp =>{
 
-					this.$refs.permTree.setCheckedKeys(res.data.data.menuIds)
-					this.permForm = res.data.data
-				})
+					this.permData = resp.data.data;
+					console.log("===================>"+resp.data.data);
+
+					//
+					this.$axios.get("/perm/findPermListByRoleId/" + id).then(res => {
+
+						let permIds=[];
+						//alert(res.data.data[0].id)
+						res.data.data.forEach(item =>{
+							if (item!=null) {
+								permIds.push(item.id)
+							}
+						});
+						//将对应的角色信息绑定到Tree菜单
+						this.$refs.permTree.setCheckedKeys(permIds);
+						console.log(permIds);
+
+					});
+
+				});
+
 			},
+			submitPermFormHandle(id) {  //确定 分配权限
 
-			submitPermFormHandle(formName) {
-				var menuIds = this.$refs.permTree.getCheckedKeys()
+				console.log("====>"+id);
+				//this.tempId=[];
+				let permIds = this.$refs.permTree.getCheckedKeys();
+				console.log("====>"+permIds);
 
-				console.log(menuIds)
+				//如果用户未分配角色 id 会报错
+				this.$axios.post('/perm/updateRolePerm/'+id, permIds).then(res => {
 
-				this.$axios.post('/sys/role/perm/' + this.permForm.id, menuIds).then(res => {
 					this.$message({
 						showClose: true,
-						message: '恭喜你，操作成功',
+						message: '分配权限操作成功',
 						type: 'success',
-						onClose:() => {
-							this.getRoleList()
+						onClose: () => {
+							this.getRoleList();
 						}
 					});
-					this.permDialogVisible = false
-					this.resetForm(formName)
+
+					this.permDialogFormVisible = false;
 				})
 			}
+
+
+
+
+
+
 		}
 	}
 </script>

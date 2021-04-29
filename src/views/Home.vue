@@ -60,7 +60,7 @@
 							<el-menu-item index="2-3">选项3</el-menu-item>
 						</el-submenu>
 						<el-menu-item index="3">{{userInfo.username}}</el-menu-item>
-						<el-menu-item index="4"><a href="学生列表.html" target="_self">首页</a></el-menu-item>
+						<el-menu-item index="4"><a href="" target="_self">首页</a></el-menu-item>
 					</el-menu>
 				</el-container>
 			</el-header>
@@ -68,7 +68,7 @@
 
 			<el-container>
 
-				<el-aside width="200px">
+				<el-aside width="auto">
 				<!--动态菜单-->
 					<SideMenu></SideMenu>
 
