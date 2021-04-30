@@ -1,163 +1,170 @@
 <template>
 	<div>
-
 		<el-form :inline="true">
+			<!--搜索框-->
 			<el-form-item>
-				<el-button type="primary" @click="dialogVisible = true">新增</el-button>
+				<el-input v-model="pagination.queryString" placeholder="菜单名/ID" clearable ></el-input>
+			</el-form-item>
+
+			<el-form-item>
+				<el-button @click="buttonFindPage()">搜索</el-button>
+			</el-form-item>
+
+			<el-form-item>
+				<el-button type="primary" @click="handleAdd" >新增</el-button>
+			</el-form-item>
+
+			<el-form-item>
+				<el-button type="success" @click="showAll">全部显示</el-button>
+			</el-form-item>
+
+			<el-form-item>
+				<el-popconfirm title="这是确定批量删除吗？" @confirm="delHandle(null)">
+					<el-button type="danger" slot="reference" :disabled="delBtlStatu" v-if="hasAuth('sys:user:delete')">
+						批量删除
+					</el-button>
+				</el-popconfirm>
 			</el-form-item>
 		</el-form>
 
-		<el-table
-				:data="tableData"
-				style="width: 100%;margin-bottom: 20px;"
-				row-key="id"
-				border
-				stripe
-				default-expand-all
-				:tree-props="{children: 'children', hasChildren: 'hasChildren'}">
 
-			<el-table-column
-					prop="name"
-					label="名称"
-					sortable
-					width="180">
-			</el-table-column>
-			<el-table-column
-					prop="perms"
-					label="权限编码"
-					sortable
-					width="180">
-			</el-table-column>
+
+
+
+		<!--表单-->
+		<el-table size="small" current-row-key="id" :data="dataList" stripe highlight-current-row>
+			<el-table-column type="selection" width="55"></el-table-column>
+			<el-table-column prop="id" align="center" width="55" label="序号"></el-table-column>
+			<el-table-column prop="name" label="菜单名称" align="center"></el-table-column>
+			<el-table-column prop="path" label="资源路径" align="left"></el-table-column>
+
+			<el-table-column prop="component" label="动态路由" align="left"></el-table-column>
+			<el-table-column prop="level" label="菜单层级" align="center"></el-table-column>
+			<el-table-column prop="description" label="描述信息" align="center"></el-table-column>
 
 			<el-table-column
 					prop="icon"
-					label="图标">
-			</el-table-column>
-
-			<el-table-column
-					prop="type"
-					label="类型">
-				<template slot-scope="scope">
-					<el-tag size="small" v-if="scope.row.type === 0">目录</el-tag>
-					<el-tag size="small" v-else-if="scope.row.type === 1" type="success">菜单</el-tag>
-					<el-tag size="small" v-else-if="scope.row.type === 2" type="info">按钮</el-tag>
-				</template>
-
-			</el-table-column>
-
-			<el-table-column
-					prop="path"
-					label="菜单URL">
-			</el-table-column>
-			<el-table-column
-					prop="component"
-					label="菜单组件">
-			</el-table-column>
-			<el-table-column
-					prop="orderNum"
-					label="排序号">
-			</el-table-column>
-			<el-table-column
-					prop="statu"
-					label="状态">
-				<template slot-scope="scope">
-					<el-tag size="small" v-if="scope.row.statu === 1" type="success">正常</el-tag>
-					<el-tag size="small" v-else-if="scope.row.statu === 0" type="danger">禁用</el-tag>
-				</template>
-
-			</el-table-column>
-			<el-table-column
-					prop="icon"
-					label="操作">
+					width="auto"
+					label="操作"
+					align="center">
 
 				<template slot-scope="scope">
-					<el-button type="text" @click="editHandle(scope.row.id)">编辑</el-button>
+					<el-button size="mini" type="primary" @click="editHandle(scope.row.id)">编辑</el-button>
 					<el-divider direction="vertical"></el-divider>
-
 					<template>
 						<el-popconfirm title="这是一段内容确定删除吗？" @confirm="delHandle(scope.row.id)">
-							<el-button type="text" slot="reference">删除</el-button>
+							<el-button size="mini" type="danger" slot="reference">删除</el-button>
 						</el-popconfirm>
 					</template>
-
 				</template>
 			</el-table-column>
-
 		</el-table>
 
+		<!--分页-->
+		<div class="pagination-container">
+			<el-pagination
+					class="pagiantion"
+					@current-change="handleCurrentChange"
+					:current-page="pagination.currentPage"
+					:page-size="pagination.pageSize"
+					layout="total, prev, pager, next, jumper"
+					:total="pagination.total">
+			</el-pagination>
+		</div>
 
-		<!--新增对话框-->
+
+		<!--新增对话框
+        addFormRules 前端校验待添加
+        -->
 		<el-dialog
-				title="提示"
+				title="添加菜单"
+				:visible.sync="dialog4addVisible"
+				width="600px"
+				:before-close="handleClose">
+
+			<el-form :model="addForm" :rules="addFormRules" ref="addForm">
+				<el-form-item label="菜单名称" prop="name" label-width="100px">
+					<el-input v-model="addForm.name" autocomplete="off"></el-input>
+				</el-form-item>
+
+				<el-form-item label="资源路径" prop="path" label-width="100px">
+					<el-input v-model="addForm.path" autocomplete="off"></el-input>
+				</el-form-item>
+
+				<el-form-item label="菜单图标" prop="icon" label-width="100px">
+					<el-input v-model="addForm.icon" autocomplete="off"></el-input>
+				</el-form-item>
+
+				<!--
+					必要参数
+					可以改成下拉选择
+				-->
+				<el-form-item label="菜单层级" prop="level" label-width="100px">
+					<el-input v-model="addForm.level" autocomplete="off" ></el-input>
+				</el-form-item>
+
+				<!--
+					必要参数
+					可以改成下拉选择
+				-->
+				<el-form-item label="动态路由" prop="component" label-width="100px">
+					<el-input v-model="addForm.component" autocomplete="off" ></el-input>
+				</el-form-item>
+
+				<el-form-item label="描述信息" prop="description" label-width="100px">
+					<el-input v-model="addForm.description" autocomplete="off" ></el-input>
+				</el-form-item>
+
+			</el-form>
+			<div slot="footer" class="dialog-footer">
+				<el-button @click="resetForm('addForm')">取 消</el-button>
+				<el-button type="primary" @click="submitAddForm()">确 定</el-button>
+			</div>
+		</el-dialog>
+
+
+
+		<!--编辑对话框-->
+		<el-dialog
+				title="修改菜单信息"
 				:visible.sync="dialogVisible"
 				width="600px"
 				:before-close="handleClose">
 
-			<el-form :model="editForm" :rules="editFormRules" ref="editForm" label-width="100px" class="demo-editForm">
-
-				<el-form-item label="上级菜单" prop="parentId">
-					<el-select v-model="editForm.parentId" placeholder="请选择上级菜单">
-						<template v-for="item in tableData">
-							<el-option :label="item.name" :value="item.id"></el-option>
-							<template v-for="child in item.children">
-								<el-option :label="child.name" :value="child.id">
-									<span>{{ "- " + child.name }}</span>
-								</el-option>
-							</template>
-						</template>
-					</el-select>
-				</el-form-item>
-
+			<el-form :model="editForm" :rules="editFormRules" ref="editForm">
 				<el-form-item label="菜单名称" prop="name" label-width="100px">
 					<el-input v-model="editForm.name" autocomplete="off"></el-input>
 				</el-form-item>
 
-				<el-form-item label="权限编码" prop="perms" label-width="100px">
-					<el-input v-model="editForm.perms" autocomplete="off"></el-input>
-				</el-form-item>
-
-				<el-form-item label="图标" prop="icon" label-width="100px">
-					<el-input v-model="editForm.icon" autocomplete="off"></el-input>
-				</el-form-item>
-				<el-form-item label="菜单URL" prop="path" label-width="100px">
+				<el-form-item label="资源路径" prop="path" label-width="100px">
 					<el-input v-model="editForm.path" autocomplete="off"></el-input>
 				</el-form-item>
 
-				<el-form-item label="菜单组件" prop="component" label-width="100px">
-					<el-input v-model="editForm.component" autocomplete="off"></el-input>
+				<el-form-item label="菜单图标" prop="icon" label-width="100px">
+					<el-input v-model="editForm.icon" autocomplete="off"></el-input>
 				</el-form-item>
 
-				<el-form-item label="类型" prop="type" label-width="100px">
-					<el-radio-group v-model="editForm.type">
-						<el-radio :label=0>目录</el-radio>
-						<el-radio :label=1>菜单</el-radio>
-						<el-radio :label=2>按钮</el-radio>
-					</el-radio-group>
+				<el-form-item label="菜单层级" prop="level" label-width="100px">
+					<el-input v-model="editForm.level" autocomplete="off" ></el-input>
 				</el-form-item>
 
-				<el-form-item label="状态" prop="statu" label-width="100px">
-					<el-radio-group v-model="editForm.statu">
-						<el-radio :label=0>禁用</el-radio>
-						<el-radio :label=1>正常</el-radio>
-					</el-radio-group>
+				<el-form-item label="动态路由" prop="component" label-width="100px">
+					<el-input v-model="editForm.component" autocomplete="off" ></el-input>
 				</el-form-item>
 
-				<el-form-item label="排序号" prop="orderNum" label-width="100px">
-					<el-input-number v-model="editForm.orderNum" :min="1" label="排序号">1</el-input-number>
+				<el-form-item label="描述信息" prop="description" label-width="100px">
+					<el-input v-model="editForm.description" autocomplete="off" ></el-input>
 				</el-form-item>
 
-
-				<el-form-item>
-					<el-button type="primary" @click="submitForm('editForm')">立即创建</el-button>
-					<el-button @click="resetForm('editForm')">重置</el-button>
-				</el-form-item>
 			</el-form>
-
+			<div slot="footer" class="dialog-footer">
+				<el-button @click="resetForm('editForm')">取 消</el-button>
+				<el-button type="primary" @click="submitForm()">确 定</el-button>
+			</div>
 		</el-dialog>
 
 
 	</div>
-
 </template>
 
 <script>
@@ -165,91 +172,188 @@
 		name: "Menu",
 		data() {
 			return {
-				dialogVisible: false,
-				editForm: {
+				delBtlStatu: true,
 
+				pagination: {//分页相关模型数据
+					currentPage: 1,//当前页码
+					pageSize: 5,//每页显示的记录数
+					total: 0,//总记录数
+					queryString: null//查询条件
 				},
+				dataList: [],//当前页要展示的分页列表数据
+				addForm:{},//新增表单
+				editForm: {},//编辑表单
+
 				editFormRules: {
-					parentId: [
-						{required: true, message: '请选择上级菜单', trigger: 'blur'}
-					],
 					name: [
-						{required: true, message: '请输入名称', trigger: 'blur'}
+						{required: true, message: '请输入菜单名称', trigger: 'blur'}
 					],
-					perms: [
-						{required: true, message: '请输入权限编码', trigger: 'blur'}
+					path: [
+						{required: true, message: '请输入资源路径', trigger: 'blur'}
 					],
-					type: [
-						{required: true, message: '请选择状态', trigger: 'blur'}
-					],
-					orderNum: [
-						{required: true, message: '请填入排序号', trigger: 'blur'}
-					],
-					statu: [
-						{required: true, message: '请选择状态', trigger: 'blur'}
-					]
 				},
-				tableData: []
+				addFormRules: {
+					name: [
+						{required: true, message: '请输入菜单名称', trigger: 'blur'}
+					],
+					path: [
+						{required: true, message: '请输入资源路径', trigger: 'blur'}
+					],
+				},
+
+				multipleSelection: [],
+
+				dialogVisible: false,
+				dialog4addVisible: false,
+				roleDialogFormVisible: false,
+
 			}
 		},
 		created() {
-			this.getMenuTree()
+			this.getMenuList()
 		},
 		methods: {
-			getMenuTree() {
-				this.$axios.get("/sys/menu/list").then(res => {
-					this.tableData = res.data.data
-				})
+			toggleSelection(rows) {
+				if (rows) {
+					rows.forEach(row => {
+						this.$refs.multipleTable.toggleRowSelection(row);
+					});
+				} else {
+					this.$refs.multipleTable.clearSelection();
+				}
 			},
-			submitForm(formName) {
-				this.$refs[formName].validate((valid) => {
+			handleSelectionChange(val) {
+				console.log("勾选")
+				console.log(val)
+				this.multipleSelection = val;
+
+				this.delBtlStatu = val.length == 0
+			},
+
+			//切换页码
+			handleCurrentChange(currentPage) {
+				//也要触发分页查询
+				//将当前页参数设置给后台
+				this.pagination.currentPage = currentPage;
+				this.getMenuList();
+			},
+			resetForm() {
+				this.$refs['editForm']={};
+				this.dialogVisible = false;
+				this.dialog4addVisible = false;
+				this.editForm = {}
+			},
+			handleClose() {
+				this.resetForm('editForm')
+			},
+
+			buttonFindPage(){
+				this.pagination.currentPage = 1;
+				this.getMenuList();
+			},
+			getMenuList() {
+				//分页参数
+				let param = {
+					currentPage: this.pagination.currentPage,//页码
+					pageSize: this.pagination.pageSize,//每页显示的记录数
+					queryString: this.pagination.queryString//查询条件
+				};
+				this.$axios.post("/menu/findMenuList",param).then(resp => {
+					this.pagination.total = resp.data.data.total;
+					this.dataList = resp.data.data.rows;
+					console.log("=======================>"+resp.data.data.rows)
+					//alert(resp.data.rows);
+
+				});
+			},
+			showAll(){  //全部显示
+				this.pagination.currentPage = 1;
+				this.pagination.queryString=null;
+				this.getMenuList();
+
+			},
+			submitForm() {   //修改提交
+				//this.$refs[formName].$children[0].validate
+				this.$refs['editForm'].validate((valid) => {
 					if (valid) {
-						this.$axios.post('/sys/menu/' + (this.editForm.id?'update' : 'save'), this.editForm)
-							.then(res => {
+						this.$axios.put('/menu/updateMenu/' + this.editForm.id, this.editForm)
+								.then(res => {
 
-								this.$message({
-									showClose: true,
-									message: '恭喜你，操作成功',
-									type: 'success',
-									onClose:() => {
-										this.getMenuTree()
-									}
-								});
+									this.$message({
+										showClose: true,
+										message: '修改成功',
+										type: 'success',
+										onClose: () => {
+											this.getMenuList()
+										}
+									});
 
-								this.dialogVisible = false
-						})
+									this.dialogVisible = false
+								})
 					} else {
 						console.log('error submit!!');
 						return false;
 					}
 				});
 			},
-			editHandle(id) {
-				this.$axios.get('/sys/menu/info/' + id).then(res => {
-					this.editForm = res.data.data
+			handleAdd(){
+				this.addForm={};
+				this.dialog4addVisible = true;
+
+			},
+			submitAddForm(){//新增
+				this.$refs["addForm"].validate((valid) => {
+					if (valid) {
+						this.$axios.post('/menu/addMenu' , this.addForm)
+								.then(res => {
+
+									this.$message({
+										showClose: true,
+										message: '新用户添加成功',
+										type: 'success',
+										onClose: () => {
+											this.getMenuList()
+										}
+									});
+
+									this.dialog4addVisible = false;
+								})
+					} else {
+						console.log('error submit!!');
+						return false;
+					}
+				});
+			},
+			editHandle(id) { //修改时信息回显
+				this.$axios.get('/menu/findMenuById/' + id).then(res => {
+					this.editForm = res.data.data;
 
 					this.dialogVisible = true
 				})
 			},
-			resetForm(formName) {
-				this.$refs[formName].resetFields();
-				this.dialogVisible = false
-				this.editForm = {}
-			},
-			handleClose() {
-				this.resetForm('editForm')
-			},
 			delHandle(id) {
-				this.$axios.post("/sys/menu/delete/" + id).then(res => {
+
+				var ids = []
+
+				if (id) {
+					ids.push(id)
+				} else {
+					this.multipleSelection.forEach(row => {
+						ids.push(row.id)
+					})
+				}
+
+				console.log(ids)
+
+				this.$axios.post("/sys/user/delete", ids).then(res => {
 					this.$message({
 						showClose: true,
 						message: '恭喜你，操作成功',
 						type: 'success',
-						onClose:() => {
-							this.getMenuTree()
+						onClose: () => {
+							this.getMenuList()
 						}
 					});
-
 				})
 			}
 		}
@@ -257,5 +361,10 @@
 </script>
 
 <style scoped>
+
+	.el-pagination {
+		float: right;
+		margin-top: 22px;
+	}
 
 </style>

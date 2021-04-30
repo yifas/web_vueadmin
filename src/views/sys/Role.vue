@@ -186,7 +186,8 @@
 			<el-form :model="editForm" :rules="editFormRules" ref="editForm" label-width="100px" class="demo-editForm">
 
 				<el-form-item label="序号" prop="id" label-width="100px">
-					<el-input v-model="editForm.id" autocomplete="off"></el-input>
+					<label>{{editForm.id}}</label>
+<!--					<el-input v-model="editForm.id" autocomplete="off" disabled="true"></el-input>-->
 				</el-form-item>
 
 				<el-form-item label="角色名" prop="name" label-width="100px">
@@ -262,6 +263,31 @@
 
 
 
+		<!-- 分配菜单对话框 -->
+		<el-dialog title="分配菜单" v-model="tempId" :visible.sync="menuDialogFormVisible" width="600px">
+
+			<el-tree
+					:data="menuData"
+					ref="menuTree"
+					show-checkbox
+					:default-checked-keys="menuIds"
+					node-key="id"
+					:default-expand-all=true
+					:props="defaultProps">
+			</el-tree>
+
+
+			<div slot="footer" class="dialog-footer">
+				<el-button @click="menuDialogFormVisible=false">取 消</el-button>
+				<el-button type="primary" @click="submitMenuFormHandle(tempId)">确 定</el-button>
+			</div>
+		</el-dialog>
+
+
+
+
+
+
 
 
 	</div>
@@ -279,17 +305,17 @@
 					total: 0,//总记录数
 					queryString: null//查询条件
 				},
-				total: 0,
-				size: 10,
-				current: 1,
 				dataList:[],
 				dialogVisible: false,
 				dialog4addVisible: false,
 				permDialogFormVisible: false,
+				menuDialogFormVisible: false,
 				editForm: {},
 				addForm:{},
 				permData: [], //所有权限数据
 				permIds: [],//权限数组
+				menuData: [],//所有菜单数据
+				menuIds: [],//菜单数组
 				tempId: [], //分配Menu Permission时传递用户ID
 				editFormRules: {
 					name: [
@@ -307,14 +333,11 @@
 						{required: true, message: '请输入关键字', trigger: 'blur'}
 					]
 				},
-
 				multipleSelection: [],
-				permForm: {},
 				defaultProps: { //Tree 树形控件的配置  label=‘name’
 					children: 'children',
 					label: 'name'
-				},
-				permTreeData: []
+				}
 			}
 		},
 		created() {
@@ -466,6 +489,79 @@
 							this.getRoleList()
 						}
 					});
+				})
+			},
+			menuHandle(id){ //菜单回显
+				this.menuDialogFormVisible = true;
+				//点击分配角色 先置空
+				this.tempId=[];
+				//将id传递给提交分配角色时使用
+				this.tempId.push(id);
+
+				this.$axios.get('/menu/findMenuListTree').then(resp =>{
+
+					this.menuData = resp.data.data;
+					console.log("===================>"+resp.data.data);
+
+
+					this.$axios.get("/menu/findMenuListByRoleId/" + id).then(res => {
+
+						let menuIds=[];
+						//alert(res.data.data[0].id)
+						res.data.data.forEach(item =>{
+							if (item!=null) {
+								menuIds.push(item.id)
+							}
+						});
+						/*
+							Tree菜单数据回显存在问题
+							将父级ID传过来选中后 会把菜单全选
+							但是保存到数据库的时候是要携带父级ID的【用于动态菜单拿的生成】
+							[解决办法]
+							后端不传父级ID  SysMenuDao.xml->findMenuListByRoleId
+						 */
+						//将对应的角色信息绑定到Tree菜单
+						this.$refs.menuTree.setCheckedKeys(menuIds);
+
+						console.log(menuIds);
+
+					});
+
+				});
+
+			},
+			submitMenuFormHandle(id) {  //确定 分配菜单
+
+				console.log("====>"+id);
+				//this.tempId=[];
+				let menuIds=[];
+				/*
+					为了动态菜单的生成 需要将父级Id也同时传入后端
+				 */
+				//获取tree中父节点
+				let temp = this.$refs.menuTree.getCheckedNodes(false, true);
+				temp.forEach(item =>{
+					if (item!=null) {
+						menuIds.push(item.id)
+					}
+				});
+				//let menuIds = this.$refs.menuTree.getCheckedKeys();
+				//let menuIds =this.$refs.menuTree.getCheckedNodes(false, true);
+				console.log("====>"+menuIds);
+
+				//如果用户未分配角色 id 会报错
+				this.$axios.post('/menu/updateRoleMenu/'+id, menuIds).then(res => {
+
+					this.$message({
+						showClose: true,
+						message: '分配权限操作成功',
+						type: 'success',
+						onClose: () => {
+							this.getRoleList();
+						}
+					});
+
+					this.menuDialogFormVisible = false;
 				})
 			},
 			permHandle(id) { //权限回显
